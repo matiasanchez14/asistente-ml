@@ -47,11 +47,17 @@
         button:hover {
             background-color: #45a049;
         }
-        #status {
-            text-align: center;
+        #status, #debug {
             margin-top: 10px;
+            text-align: center;
             font-weight: bold;
+        }
+        #status {
             color: #4CAF50;
+        }
+        #debug {
+            color: #333;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -63,6 +69,7 @@
         <button onclick="getAnswer()">Obtener Respuesta</button>
         <button onclick="copyAndLearn()">Copiar y Aprender Respuesta</button>
         <div id="status"></div>
+        <div id="debug"></div>
     </div>
 
     <script>
@@ -101,16 +108,33 @@
                 return;
             }
 
+            const debugElement = document.getElementById('debug');
+            debugElement.innerHTML = 'Enviando solicitud al backend...';
+
             try {
-                const response = await axios.post('https://tu-servicio-backend.onrender.com/get-custom-gpt-response', { 
+                const response = await axios.post('https://asistente-ml.onrender.com/get-custom-gpt-response', { 
                     question: question,
                     history: Object.entries(questions).map(([q, a]) => ({ question: q, answer: a }))
                 });
 
-                document.getElementById('answer').value = response.data.answer;
+                debugElement.innerHTML += '<br>Respuesta recibida del backend.';
+                console.log('Respuesta completa del backend:', response.data);
+
+                if (response.data && response.data.answer) {
+                    document.getElementById('answer').value = response.data.answer;
+                    debugElement.innerHTML += '<br>Respuesta GPT aplicada correctamente.';
+                } else {
+                    throw new Error('La respuesta del backend no contiene una respuesta válida.');
+                }
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error al obtener la respuesta. Por favor, intente nuevamente.');
+                console.error('Error detallado:', error);
+                debugElement.innerHTML += `<br>Error: ${error.message}`;
+                if (error.response) {
+                    console.log('Datos de respuesta de error:', error.response.data);
+                    console.log('Estado de error:', error.response.status);
+                    debugElement.innerHTML += `<br>Estado de error: ${error.response.status}`;
+                }
+                alert('Error al obtener la respuesta. Por favor, revise la consola y el área de depuración para más detalles.');
             }
         }
 
