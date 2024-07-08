@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: asistente-ml
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GPT_MODEL
+        sync: false
