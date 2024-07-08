@@ -6,8 +6,53 @@
     <title>Asistente de Respuestas MercadoLibre</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        /* ... (mantén los estilos anteriores) ... */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #app {
+            width: 400px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        input, textarea, button {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
     </style>
 </head>
 <body>
@@ -15,12 +60,13 @@
         <h2>Asistente de Respuestas MercadoLibre</h2>
         <input type="text" id="question" placeholder="Ingrese la pregunta">
         <textarea id="answer" placeholder="Respuesta sugerida"></textarea>
+        <button onclick="getAnswer()">Obtener Respuesta</button>
         <button onclick="copyAndLearn()">Copiar y Aprender Respuesta</button>
         <div id="status"></div>
     </div>
 
     <script>
-        // Configuración de Firebase (reemplaza con tus propias credenciales)
+        // Configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyA9GK6IVhl5TfFZ-DsQ5mGnIofk_mFeJtM",
             authDomain: "asistente-ml.firebaseapp.com",
@@ -44,63 +90,29 @@
             });
         }
 
-        function loadQuestions() {
-            database.ref('questions').on('value', (snapshot) => {
-                questions = snapshot.val() || {};
-            });
-        }
-
         // Cargar preguntas al iniciar
         loadQuestions();
 
-        // Función para procesar el texto
-        function processText(text) {
-            return text.toLowerCase()
-                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-                .replace(/\s+/g, " ")
-                .trim();
-        }
-
-        // Función para extraer palabras clave
-        function extractKeywords(text) {
-            const stopWords = new Set(["el", "la", "los", "las", "un", "una", "unos", "unas", "y", "o", "pero", "si", "no", "en", "de", "a", "con", "por", "para", "como", "se", "su", "sus", "este", "esta", "estos", "estas", "ese", "esa", "esos", "esas", "aquel", "aquella", "aquellos", "aquellas"]);
-            return processText(text)
-                .split(" ")
-                .filter(word => !stopWords.has(word) && word.length > 2);
-        }
-
-        // Función para calcular la similitud entre dos conjuntos de palabras clave
-        function calculateSimilarity(keywords1, keywords2) {
-            const set1 = new Set(keywords1);
-            const set2 = new Set(keywords2);
-            const intersection = new Set([...set1].filter(x => set2.has(x)));
-            const union = new Set([...set1, ...set2]);
-            return intersection.size / union.size;
-        }
-
-        // Evento de entrada para la pregunta
-        document.getElementById('question').addEventListener('input', function() {
-            const question = this.value;
-            const processedQuestion = processText(question);
-            const keywords = extractKeywords(processedQuestion);
-            let bestMatch = '';
-            let highestSimilarity = 0;
-
-            for (let key in questions) {
-                const keyKeywords = extractKeywords(key);
-                const similarity = calculateSimilarity(keywords, keyKeywords);
-                if (similarity > highestSimilarity) {
-                    highestSimilarity = similarity;
-                    bestMatch = key;
-                }
+        // Función para obtener respuesta del backend
+        async function getAnswer() {
+            const question = document.getElementById('question').value.trim();
+            if (!question) {
+                alert('Por favor, ingrese una pregunta.');
+                return;
             }
 
-            if (highestSimilarity > 0.3) { // Umbral ajustado para mayor flexibilidad
-                document.getElementById('answer').value = questions[bestMatch];
-            } else {
-                document.getElementById('answer').value = "Lo siento, no tengo una respuesta para esta pregunta. Por favor, ingresa una respuesta adecuada.";
+            try {
+                const response = await axios.post('https://tu-servicio-backend.onrender.com/get-custom-gpt-response', { 
+                    question: question,
+                    history: Object.entries(questions).map(([q, a]) => ({ question: q, answer: a }))
+                });
+
+                document.getElementById('answer').value = response.data.answer;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al obtener la respuesta. Por favor, intente nuevamente.');
             }
-        });
+        }
 
         // Función para copiar y aprender la respuesta
         async function copyAndLearn() {
